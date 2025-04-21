@@ -1,0 +1,243 @@
+# MODELO K-MEANS (Autoria e Co-autoria de artigos científicos)
+
+# Carregamento de Pacotes
+if(!require(ggplot2))install.packages("ggplot2")
+library(ggplot2)
+if(!require(dplyr))install.packages("dplyr")
+library(dplyr)
+if(!require(corrplot))install.packages("corrplot")
+library(corrplot)
+if(!require(PerformanceAnalytics))install.packages("PerformanceAnalytics")
+library(PerformanceAnalytics)
+if(!require(readxl))install.packages("readxl")
+library(readxl)
+##
+
+# Dados
+dados<- read_excel("Daniel1.xlsx", sheet = 1) 
+dados
+str(dados)
+
+# Mudar 'Específico' para caractere (para poder usá-lo como rótulo)
+dados$ESPECIFICO <- as.character(dados$ESPECIFICO)
+str(dados)
+dados
+
+par(mfrow = c(1, 1))
+#plota o gráfico coluna vs coluna
+plot(dados[, 1:6])
+
+# Histogrmas 1
+#mostra a distribui��o dos gastos e da renda dos clientes - histograma
+hist(dados$PROP_2OU3, col = "lightblue", freq = FALSE, main = "Distribuição de PROP_2OU3",
+     xlab = "Valores", ylab = "Densidade")
+curve(dnorm(x, mean = mean(dados$PROP_2OU3, na.rm = TRUE), 
+            sd = sd(dados$PROP_2OU3, na.rm = TRUE)), 
+      col = "red", lwd = 2, add = TRUE)
+
+hist(dados$PROP_CO, col = "lightcoral", freq = FALSE, main = "Distribuição de PROP_CO",
+     xlab = "Valores", ylab = "Densidade")
+curve(dnorm(x, mean = mean(dados$PROP_CO, na.rm = TRUE), 
+            sd = sd(dados$PROP_CO, na.rm = TRUE)), 
+      col = "red", lwd = 2, add = TRUE)
+
+
+# Histogramas 2 (juntos):
+# Configura o layout para 1 linha e 2 colunas (dois gráficos lado a lado)
+par(mfrow = c(1, 2), mar = c(5, 4, 4, 2) + 0.1)  # Ajusta margens
+
+# Histograma para PROP_2OU3 (lado esquerdo)
+hist(dados$PROP_2OU3, col = rgb(0, 0, 1, alpha = 0.5),  # Azul transparente
+     freq = FALSE, main = "PROP_2OU3",
+     xlab = "Valores", ylab = "Densidade", xlim = range(c(dados$PROP_2OU3, dados$PROP_CO)))
+curve(dnorm(x, mean = mean(dados$PROP_2OU3, na.rm = TRUE), 
+            sd = sd(dados$PROP_2OU3, na.rm = TRUE)), 
+      col = "red", lwd = 2, add = TRUE)
+
+# Histograma para PROP_CO (lado direito)
+hist(dados$PROP_CO, col = rgb(1, 0, 0, alpha = 0.5),  # Vermelho transparente
+     freq = FALSE, main = "PROP_CO",
+     xlab = "Valores", ylab = "", xlim = range(c(dados$PROP_2OU3, dados$PROP_CO)))
+curve(dnorm(x, mean = mean(dados$PROP_CO, na.rm = TRUE), 
+            sd = sd(dados$PROP_CO, na.rm = TRUE)), 
+      col = "red", lwd = 2, add = TRUE)
+
+# Restaura as configurações gráficas padrão
+par(mfrow = c(1, 1))
+
+# Boxplot1:
+## Boxplot vertical para PROP_2OU3
+boxplot(dados$PROP_2OU3, 
+        col = "lightblue", 
+        main = "Distribuição de PROP_2OU3",
+        ylab = "Proporção",
+        xlab = "PROP_2OU3",
+        boxwex = 0.6,  # Largura do boxplot
+        border = "black")  # Cor da borda
+
+## Boxplot vertical para PROP_CO
+boxplot(dados$PROP_CO, 
+        col = "lightcoral", 
+        main = "Distribuição de PROP_CO",
+        ylab = "Proporção",
+        xlab = "PROP_CO",
+        boxwex = 0.6,
+        border = "black")
+# Boxplot2:
+## Juntando os dois boxplots em um único gráfico
+boxplot(dados$PROP_2OU3, dados$PROP_CO,
+        names = c("PROP_2OU3", "PROP_CO"),
+        col = c("lightblue", "lightcoral"),
+        main = "Comparação das Distribuições",
+        ylab = "Proporção",
+        boxwex = 0.6,
+        border = c("black", "black"))
+par(mfrow = c(1, 1))
+
+# Correlação
+library(PerformanceAnalytics)
+dados
+m<-dados[,c(5,6)]
+m
+chart.Correlation(m,histogram=T)
+
+# Faz um gr�fico de PROP_CO vs PROP_2OU3 A escala de cores mostra as diferentes regi�es
+plot(dados$PROP_2OU3, dados$PROP_CO, pch = 21, col = "red")
+
+# Ajuste da regressão linear
+modelo <- lm(PROP_CO ~ PROP_2OU3, data = dados)
+
+# Obter os coeficientes da regressão
+coeficientes <- coef(modelo)
+intercepto <- round(coeficientes[1], 3)
+inclinação <- round(coeficientes[2], 3)
+
+# Calcular o R²
+r2 <- summary(modelo)$r.squared
+r2 <- round(r2, 4)
+
+# Plotar os dados
+plot(dados$PROP_2OU3, dados$PROP_CO, pch = 21, col = "red", bg = "pink",
+     xlab = "PROP_2OU3", ylab = "PROP_CO")
+
+# Adicionar a reta de regressão
+abline(modelo, col = "blue", lwd = 2)
+
+# Adicionar equação da reta e R² no gráfico
+texto_eq <- bquote(y == .(inclinação) * x + .(intercepto) ~ ~ ~ R^2 == .(r2))
+legend("topleft", legend = as.expression(texto_eq), bty = "n", text.col = "black")
+
+# Ajuste da regressão com eixos invertidos
+modelo_invertido <- lm(PROP_2OU3 ~ PROP_CO, data = dados)
+
+# Obter os coeficientes
+coeficientes_inv <- coef(modelo_invertido)
+intercepto_inv <- round(coeficientes_inv[1], 3)
+inclinacao_inv <- round(coeficientes_inv[2], 3)
+
+# Calcular R²
+r2_inv <- summary(modelo_invertido)$r.squared
+r2_inv <- round(r2_inv, 4)
+
+# Plotar com eixos invertidos
+plot(dados$PROP_CO, dados$PROP_2OU3, pch = 21, col = "blue", bg = "lightblue",
+     xlab = "PROP_CO", ylab = "PROP_2OU3")
+
+# Adicionar a reta de regressão
+abline(modelo_invertido, col = "red", lwd = 2)
+
+# Adicionar equação da reta e R²
+texto_eq_inv <- bquote(y == .(inclinacao_inv) * x + .(intercepto_inv) ~ ~ ~ R^2 == .(r2_inv))
+legend("topleft", legend = as.expression(texto_eq_inv), bty = "n", text.col = "black")
+
+# Separa apenas as colunas 5 e 6 para analisar os dados
+preprocessed <- dados[,5:6]
+
+# Padroniza os dados (média = 0, desvio padrão = 1)
+preprocessed_scaled <- scale(preprocessed)
+
+# Gerar dados de WCSS (como você já fez)
+wcss <- numeric(10)
+for (k in 1:10) {
+  model <- kmeans(preprocessed_scaled, centers = k, nstart = 20)
+  wcss[k] <- model$tot.withinss
+}
+
+# Plotar Gráfico do Cotovelo para determinar K:
+plot(1:10, wcss, type = "b", pch = 19, 
+     xlab = "Número de Clusters (K)", 
+     ylab = "WCSS",
+     main = "Método do Cotovelo")
+
+# Especifica o número de clusters
+k <- 2
+
+# Roda o modelo k-means nos dados padronizados
+set.seed(123)  # Para reprodutibilidade
+output <- kmeans(preprocessed_scaled, centers = k, nstart = 20)
+
+# Cria o nome da coluna de cluster dinamicamente
+Nome_coluna <- paste("cluster", k, sep = "_")
+
+# Adiciona o número do cluster ao dataset original
+dados[[Nome_coluna]] <- factor(output$cluster, levels = 1:k)
+
+# Gráfico de clusters com rótulos
+library(ggplot2)
+library(dplyr)
+library(ggthemes)
+
+cluster_graph_labels <- ggplot(dados, aes(x = PROP_2OU3, y = PROP_CO, colour = .data[[Nome_coluna]])) +
+  geom_point(aes(size = ARTIGOS)) +
+  geom_text(aes(label = ID), vjust = -0.5, size = 4, show.legend = FALSE) +
+  scale_colour_manual(
+    name = "Cluster Group",
+    values = c('red', 'blue', 'green3', 'deepskyblue', 'orange', 'darkorchid4', 'violet', 'pink1', 'tan3', 'black')[1:k]
+  ) +
+  scale_size_continuous(name = "Artigos") +
+  scale_x_continuous(labels = scales::percent_format(big.mark = ".", decimal.mark = ",")) +
+  scale_y_continuous(labels = scales::percent_format(big.mark = ".", decimal.mark = ",")) +
+  ggtitle(paste("k-means com", k, "Clusters e Rótulos")) +
+  xlab("Artigos com 2 ou 3 autores (%)") +
+  ylab("Artigos com Co-autoria (%)") +
+  theme_gray()
+print(cluster_graph_labels)
+
+# Delimitando os grupos por retângulos
+# Calcular os limites (bounding box) para cada cluster
+retangulos <- dados %>%
+  group_by(!!sym(Nome_coluna)) %>%
+  summarise(
+    xmin = min(PROP_2OU3),
+    xmax = max(PROP_2OU3),
+    ymin = min(PROP_CO),
+    ymax = max(PROP_CO)
+  )
+
+# Gráfico com retângulos + pontos + rótulos
+cluster_graph_labels_retangulos <- ggplot(dados, aes(x = PROP_2OU3, y = PROP_CO, colour = .data[[Nome_coluna]])) +
+  # Retângulos
+  geom_rect(data = retangulos, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = .data[[Nome_coluna]]),
+            inherit.aes = FALSE, alpha = 0.1, color = "black", linetype = "dashed") +
+  # Pontos
+  geom_point(aes(size = ARTIGOS)) +
+  # Rótulos
+  geom_text(aes(label = ID), vjust = -0.5, size = 4, show.legend = FALSE) +
+  # Escalas e estética
+  scale_colour_manual(
+    name = "Cluster Group",
+    values = c('red', 'blue', 'green3', 'darkorchid4','deepskyblue', 'orange', 'violet', 'pink1', 'tan3', 'black')[1:k]
+  ) +
+  scale_fill_manual(
+    name = "Cluster Group",
+    values = c('red', 'blue', 'green3', 'darkorchid4', 'deepskyblue', 'orange', 'violet', 'pink1', 'tan3', 'black')[1:k]
+  ) +
+  scale_size_continuous(name = "Artigos") +
+  scale_x_continuous(labels = scales::percent_format(big.mark = ".", decimal.mark = ",")) +
+  scale_y_continuous(labels = scales::percent_format(big.mark = ".", decimal.mark = ",")) +
+  ggtitle(paste("k-means com", k, "Clusters e Retângulos")) +
+  xlab("Artigos com 2 ou 3 autores (%)") +
+  ylab("Artigos com Co-autoria (%)") +
+  theme_gray()
+# Mostrar
+print(cluster_graph_labels_retangulos)
